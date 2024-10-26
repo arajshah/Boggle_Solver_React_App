@@ -28,6 +28,7 @@ function getDictionary() {
 }
 
 function App() {
+  // State variables
   const [gameState, setGameState] = useState(GAME_STATE.BEFORE);
   const [gridSize, setGridSize] = useState(3);
   const [grid, setGrid] = useState([]);
@@ -35,36 +36,66 @@ function App() {
   const [foundWords, setFoundWords] = useState([]);
   const [startTime, setStartTime] = useState(null);
   const [totalTime, setTotalTime] = useState(0);
+  const [message, setMessage] = useState('');
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [timerId, setTimerId] = useState(null);
 
   useEffect(() => {
     if (gameState === GAME_STATE.IN_PROGRESS) {
-      // Generate random grid and solutions
+      // Generate random grid
       const newGrid = generateRandomGrid(gridSize);
       setGrid(newGrid);
 
       // Initialize BoggleSolver
-      const dictionary = getDictionary(); // Implement this function to get your dictionary words
+      const dictionary = getDictionary();
       const solver = new BoggleSolver(newGrid, dictionary);
       const solutions = solver.getSolutions();
       setAllSolutions(solutions);
 
       setFoundWords([]);
       setStartTime(Date.now());
+      setMessage('');
+
+      // Start the timer
+      setTimeLeft(60);
+      const id = setInterval(() => {
+        setTimeLeft((prevTime) => {
+          if (prevTime <= 1) {
+            clearInterval(id);
+            setGameState(GAME_STATE.ENDED);
+            return 0;
+          }
+          return prevTime - 1;
+        });
+      }, 1000);
+      setTimerId(id);
     } else if (gameState === GAME_STATE.ENDED) {
+      // Clear the timer
+      if (timerId) {
+        clearInterval(timerId);
+        setTimerId(null);
+      }
+
       const endTime = Date.now();
       setTotalTime(((endTime - startTime) / 1000).toFixed(2));
-      // Remove found words from allSolutions
-      const missedWords = allSolutions.filter(word => !foundWords.includes(word));
+
+      // Compute missed words
+      const missedWords = allSolutions.filter(
+        (word) => !foundWords.includes(word)
+      );
       setAllSolutions(missedWords);
     }
   }, [gameState]);
 
   const handleWordSubmit = (word) => {
     const upperWord = word.toUpperCase();
-    if (allSolutions.includes(upperWord) && !foundWords.includes(upperWord)) {
+    if (foundWords.includes(upperWord)) {
+      setMessage(`You've already found "${upperWord}".`);
+    } else if (allSolutions.includes(upperWord)) {
       setFoundWords([...foundWords, upperWord]);
+      setMessage(`Good job! "${upperWord}" is correct.`);
     } else {
-      // Handle invalid word (optional)
+      setMessage(`"${upperWord}" is not a valid word.`);
     }
   };
 
@@ -76,12 +107,15 @@ function App() {
         gridSize={gridSize}
         setGridSize={setGridSize}
         setTotalTime={setTotalTime}
+        setTimerId={setTimerId}
+        timerId={timerId}
       />
 
       {gameState === GAME_STATE.IN_PROGRESS && (
         <>
+          <p>Time Left: {timeLeft} seconds</p>
           <Board grid={grid} />
-          <GuessInput onWordSubmit={handleWordSubmit} />
+          <GuessInput onWordSubmit={handleWordSubmit} message={message} />
           <FoundSolutions headerText="Words You've Found" words={foundWords} />
         </>
       )}

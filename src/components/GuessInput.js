@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import TextField from '@mui/material/TextField';
+import './GuessInput.css';
 
-function GuessInput({ onWordSubmit }) {
+function GuessInput({ onWordSubmit, message }) {
   const [inputValue, setInputValue] = useState('');
 
   const handleKeyPress = (event) => {
@@ -17,9 +18,10 @@ function GuessInput({ onWordSubmit }) {
         label="Enter a word"
         variant="outlined"
         value={inputValue}
-        onChange={e => setInputValue(e.target.value)}
+        onChange={(e) => setInputValue(e.target.value)}
         onKeyPress={handleKeyPress}
       />
+      {message && <p className="message">{message}</p>}
     </div>
   );
 }
